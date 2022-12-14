@@ -10,14 +10,14 @@ class handler(BaseHTTPRequestHandler):
         self.validate()
 
         # We need an extra boolean because BaseHTTPRequestHandler does not support early exits
-        start_date = self.headers.get('startDate')
-        print(f'Received {start_date} header param')
+        self.start_date = self.headers.get('startDate')
+        print(f'Received {self.start_date} header param')
         uri = f"https://xola.com/api/experiences/61536b244f19be5b3c6e4241/availability?" \
-              f"start={start_date}&end={start_date}&privacy=public"
+              f"start={self.start_date}&end={self.start_date}&privacy=public"
         print(f'Making request to {uri}')
         r = requests.get(uri)
         print('Response ' + json.dumps(r.json()))
-        available_times = self.get_available_times(r.json()[start_date])
+        available_times = self.get_available_times(r.json()[self.start_date])
         print('available_times=' + str(available_times))
         formatted_times = self.formatted_times(available_times)
         print('formatted_times=' + formatted_times)
@@ -46,7 +46,8 @@ class handler(BaseHTTPRequestHandler):
         return {t: v for t, v in times_dict.items() if v > 0}
 
     def formatted_times(self, times):
-        formatted = []  # we use a list for performance benefit
+        header = f"For {datetime.datetime.strptime(self.start_date, '%Y-%m-%d').strftime('%B %-d, %Y')}:"
+        formatted = [header]  # we use a list for performance benefit on str concat
         for t, v in times.items():
             formatted.append(f"{datetime.datetime.strptime(t, '%H%M').strftime('%I:%M %p')} has {v} slots open")
         return '\n'.join(formatted)
