@@ -2,7 +2,12 @@
 
 Basic Python serverless API that grabs bryant park free skate times. Deployed on [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples).
 
-## Running Locally
+## Deployment Configuration
+
+I'm currently deploying the logic as a Python lambda server on Vercel, which is called by the Apple Shortcuts "Get Content" API.
+Request flow: User invokes Siri Shortcut, provides date. Apple Shortcut passes the date as a request header to the API host and endpoint. The lambda receives this request, and uses the date header in its call to the Bryant Park API. The lambda reads the BP API response, and sends a plaintext response to Apple Shortcuts, which then displays the formatted text for Siri to read.
+
+## Running in Dev Mode
 
 ```bash
 npm i -g vercel
