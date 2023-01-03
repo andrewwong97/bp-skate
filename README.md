@@ -1,6 +1,6 @@
 ## Introduction
 
-Basic Python serverless API that grabs bryant park free skate times. Deployed on [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples).
+Basic Python serverless API that grabs bryant park free ice skating sessions along with the number of slots. Deployed on [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples).
 
 ## Deployment Configuration
 
