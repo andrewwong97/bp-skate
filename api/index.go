@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,17 +11,29 @@ import (
 	"time"
 )
 
-func getSkateTimes(ctx *gin.Context) {
+// direct handler for serverless invocation
+func Handler(w http.ResponseWriter, r *http.Request) {
 	// Basic validation, exits early if not authorized
-	origin := ctx.GetHeader("token")
+	origin := r.Header.Get("token")
 	if origin != "Andrew" {
-		ctx.Data(http.StatusForbidden, "Forbidden", nil)
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Forbidden"))
 		return
 	}
 
-	// Query BP API for times
-	date := ctx.GetHeader("startDate")
+	// Get date and make request
+	date := r.Header.Get("startDate")
 	dateObj, _ := time.Parse("2006-01-02", date)
+	sb := makeRequestAndReturnFormattedTimes(date, dateObj)
+
+	// Write outgoing formatted response
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(sb.String()))
+}
+
+func makeRequestAndReturnFormattedTimes(date string, dateObj time.Time) strings.Builder {
+	// Query BP API for times
 	res, err := http.Get("https://xola.com/api/experiences/61536b244f19be5b3c6e4241/availability?start=" + date + "&end=" + date + "&privacy=public")
 	fmt.Println("Successfully made outbound request")
 
@@ -53,14 +64,5 @@ func getSkateTimes(ctx *gin.Context) {
 		sb.WriteString(timeObj.Format("3:04 PM") + " has " + strconv.Itoa(count) + " spots\n")
 	}
 	fmt.Println("Successfully formatted response")
-
-	ctx.Data(http.StatusOK, "text/plain", []byte(sb.String()))
-}
-
-func main() {
-	router := gin.Default()
-	router.SetTrustedProxies(nil)
-	router.GET("/skateTimes", getSkateTimes)
-
-	router.Run("localhost:8080")
+	return sb
 }
