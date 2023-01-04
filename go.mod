@@ -1,2 +1,2 @@
 module bp-skate
-go 1.19.4
+go 1.19
