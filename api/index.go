@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -53,15 +54,28 @@ func makeRequestAndReturnFormattedTimes(date string, dateObj time.Time) strings.
 	// remove 0 values
 	for k, v := range skateTimesMap[date] {
 		if v > 0 {
+			if len(k) == 3 {
+				k = "0" + k
+			}
 			cleanedMap[k] = v
 		}
 	}
 
+	// Go Maps do not iterate in insertion order, so we have to hack it to do so
+	// create slice and store keys
+	keys := make([]string, 0, len(cleanedMap))
+	for k := range cleanedMap {
+		keys = append(keys, k)
+	}
+	// sort the slice by keys
+	sort.Strings(keys)
+
 	var sb strings.Builder
 	sb.WriteString("For " + dateObj.Format("Jan 2, 2006") + ":\n")
-	for skateTime, count := range cleanedMap {
-		timeObj, _ := time.Parse("0304", skateTime)
-		sb.WriteString(timeObj.Format("3:04 PM") + " has " + strconv.Itoa(count) + " spots\n")
+	// iterate by sorted keys
+	for _, skateTime := range keys {
+		timeObj, _ := time.Parse("1504", skateTime)
+		sb.WriteString(timeObj.Format("3:04 PM") + " has " + strconv.Itoa(cleanedMap[skateTime]) + " spots\n")
 	}
 	fmt.Println("Successfully formatted response")
 	return sb
