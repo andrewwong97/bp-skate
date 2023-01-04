@@ -36,7 +36,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 func makeRequestAndReturnFormattedTimes(date string, dateObj time.Time) strings.Builder {
 	// Query BP API for times
 	res, err := http.Get("https://xola.com/api/experiences/61536b244f19be5b3c6e4241/availability?start=" + date + "&end=" + date + "&privacy=public")
-	fmt.Println("Successfully made outbound request")
+	fmt.Println("Successfully made outbound request for " + date)
 
 	// check for response error
 	if err != nil {
@@ -77,6 +77,5 @@ func makeRequestAndReturnFormattedTimes(date string, dateObj time.Time) strings.
 		timeObj, _ := time.Parse("1504", skateTime)
 		sb.WriteString(timeObj.Format("3:04 PM") + " has " + strconv.Itoa(cleanedMap[skateTime]) + " spots\n")
 	}
-	fmt.Println("Successfully formatted response")
 	return sb
 }
