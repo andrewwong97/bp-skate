@@ -8,6 +8,10 @@ I'm currently deploying the logic as a Go lambda on Vercel, which is called by t
 
 Request flow: User invokes Siri Shortcut, provides date. Apple Shortcut passes the date as a request header to the API host and endpoint. The lambda receives this request, and uses the date header in its call to the Bryant Park API. The lambda reads the BP API response, and sends a plaintext response to Apple Shortcuts, which then displays the formatted text for Siri to read.
 
+## Prod Usage
+
+I'm currently limiting access of the API due to rate limiting issues. If you need access, please file a ticket in the [Issues](https://github.com/andrewwong97/bp-skate/issues) tab.
+
 ## Running in Dev Mode
 You can test the functionality of the outbound request using the legacy Python code by moving `legacy-index.py` from root to `api/` folder (maybe have to delete or temporarily move `index.go`). Currently there is no way to test the Go code besides deploying to staging.
 
