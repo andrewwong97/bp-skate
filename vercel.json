@@ -1,3 +1,9 @@
 {
-  "redirects": [{ "source": "/", "destination": "/api" }]
+  "version": 2,
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app/index.py"
+    }
+  ]
 }

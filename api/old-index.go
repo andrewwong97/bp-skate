@@ -1,3 +1,4 @@
+// Originally written in Go, but now replaced with Python for simplicity and readability.
 package handler
 
 import (
