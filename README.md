@@ -27,7 +27,11 @@ pip install uvicorn
 ```
 
 ```
-python api/index.py
+cd api
 ```
 
-At this point, the server should be available on 0.0.0.0:8000.
+```
+fastapi dev index.py
+```
+
+At this point, the server should be available on 0.0.0.0:8000 and hot reload on changes.
