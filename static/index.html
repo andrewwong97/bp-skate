@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bryant Park Skate Availability</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 40px;
+        max-width: 600px;
+        width: 100%;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 28px;
+      }
+
+      .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      input[type="date"] {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+      }
+
+      input[type="date"]:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      button {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .results {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        min-height: 100px;
+        white-space: pre-wrap;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #333;
+        display: none;
+      }
+
+      .results.show {
+        display: block;
+      }
+
+      .loading {
+        text-align: center;
+        color: #667eea;
+        font-style: italic;
+      }
+
+      .error {
+        color: #e74c3c;
+        background: #fee;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #e74c3c;
+      }
+
+      .info {
+        margin-top: 8px;
+        margin-bottom: 12px;
+        padding: 12px;
+        background: #e3f2fd;
+        border-radius: 8px;
+        border-left: 4px solid #2196f3;
+        font-size: 13px;
+        color: #1565c0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>⛸️ Bryant Park Skate Availability</h1>
+      <p class="subtitle">Check available skating times</p>
+
+      <form id="availabilityForm">
+        <div class="form-group">
+          <label for="date">Select Date</label>
+          <div class="info">
+            💡 <strong>Tip:</strong> Leave the date empty to check today's
+            availability automatically. You can select any date from today
+            through the next 5 days.
+          </div>
+          <input type="date" id="date" name="date" />
+        </div>
+        <button type="submit" id="submitBtn">Check Availability</button>
+      </form>
+
+      <div id="results" class="results"></div>
+    </div>
+
+    <script>
+      const form = document.getElementById("availabilityForm");
+      const resultsDiv = document.getElementById("results");
+      const submitBtn = document.getElementById("submitBtn");
+      const dateInput = document.getElementById("date");
+
+      // Set date range: today and next 5 days (6 days total)
+      const today = new Date();
+      const maxDate = new Date(today);
+      maxDate.setDate(today.getDate() + 5); // 5 days from today
+
+      const todayStr = today.toISOString().split("T")[0];
+      const maxDateStr = maxDate.toISOString().split("T")[0];
+
+      dateInput.setAttribute("min", todayStr);
+      dateInput.setAttribute("max", maxDateStr);
+      dateInput.value = todayStr; // Set default to today's date
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const date = dateInput.value;
+        const url = date
+          ? `/availability/text?date=${date}`
+          : "/availability/text";
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Loading...";
+        resultsDiv.className = "results show";
+        resultsDiv.innerHTML =
+          '<div class="loading">Fetching availability...</div>';
+
+        try {
+          const response = await fetch(url);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const text = await response.text();
+
+          if (text.trim()) {
+            resultsDiv.innerHTML = text;
+          } else {
+            resultsDiv.innerHTML =
+              '<div class="error">No availability data found.</div>';
+          }
+        } catch (error) {
+          resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Check Availability";
+        }
+      });
+
+      // Load today's availability on page load
+      window.addEventListener("load", () => {
+        form.dispatchEvent(new Event("submit"));
+      });
+    </script>
+  </body>
+</html>

@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Query, HTTPException, Response
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Optional, List
 import logging
 from datetime import datetime
+import os
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -27,6 +29,11 @@ except ImportError:
     )
 
 app = FastAPI()
+
+# Mount static files
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Cache duration: 5 minutes = 300 seconds
 CACHE_MAX_AGE = 300
@@ -99,7 +106,32 @@ def format_skate_times_range(times: List[AvailabilityTime]) -> str:
 @app.get("/")
 async def root(response: Response):
     """
-    Root endpoint - Gets the API info and documentation links.
+    Root endpoint - Serves index.html if available, otherwise returns API info.
+    
+    **Returns:**
+    
+    - HTML page with availability checker if static files are available.
+    - Otherwise, API information including links to Swagger UI, ReDoc, and OpenAPI JSON documentation.
+    """
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    add_cache_headers(response)
+    return {
+        "message": "Bryant Park Skate Availability API",
+        "documentation": {
+            "swagger": "/docs",
+            "redoc": "/redoc",
+            "openapi_json": "/openapi.json"
+        }
+    }
+
+
+@app.get("/api")
+async def api_info(response: Response):
+    """
+    API info endpoint - Returns API information and documentation links.
     
     **Returns:**
     
