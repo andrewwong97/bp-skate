@@ -35,16 +35,6 @@ static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Cache duration: 5 minutes = 300 seconds
-CACHE_MAX_AGE = 300
-
-
-def add_cache_headers(response: Response) -> Response:
-    """Add cache headers to response for 5 minutes."""
-    response.headers["Cache-Control"] = f"public, max-age={CACHE_MAX_AGE}"
-    return response
-
-
 def format_skate_times(times: List[AvailabilityTime], date: str) -> str:
     """
     Format availability times into human-readable text.
@@ -117,7 +107,6 @@ async def root(response: Response):
     if os.path.exists(index_path):
         return FileResponse(index_path)
     
-    add_cache_headers(response)
     return {
         "message": "Bryant Park Skate Availability API",
         "documentation": {
@@ -137,7 +126,6 @@ async def api_info(response: Response):
     
     - API information including links to Swagger UI, ReDoc, and OpenAPI JSON documentation.
     """
-    add_cache_headers(response)
     return {
         "message": "Bryant Park Skate Availability API",
         "documentation": {
@@ -188,11 +176,8 @@ async def get_availability(
         # Return formatted text if caller is USER
         if caller == CallerType.USER:
             formatted_text = format_skate_times(filtered_times, date)
-            text_response = PlainTextResponse(content=formatted_text)
-            add_cache_headers(text_response)
-            return text_response
+            return PlainTextResponse(content=formatted_text)
         
-        add_cache_headers(response)
         return AvailabilityResponse(
             date=date,
             count=len(filtered_times),
@@ -252,11 +237,8 @@ async def get_availability_text(
         # Return formatted text if caller is USER (default)
         if caller == CallerType.USER:
             formatted_text = format_skate_times(filtered_times, date)
-            text_response = PlainTextResponse(content=formatted_text)
-            add_cache_headers(text_response)
-            return text_response
+            return PlainTextResponse(content=formatted_text)
         
-        add_cache_headers(response)
         return AvailabilityResponse(
             date=date,
             count=len(filtered_times),
@@ -315,11 +297,8 @@ async def get_availability_range(
         # Return formatted text if caller is USER
         if caller == CallerType.USER:
             formatted_text = format_skate_times_range(filtered_times)
-            text_response = PlainTextResponse(content=formatted_text)
-            add_cache_headers(text_response)
-            return text_response
+            return PlainTextResponse(content=formatted_text)
         
-        add_cache_headers(response)
         return AvailabilityRangeResponse(
             start_date=start_date,
             end_date=end_date,
@@ -379,11 +358,8 @@ async def get_availability_range_text(
         # Return formatted text if caller is USER (default)
         if caller == CallerType.USER:
             formatted_text = format_skate_times_range(filtered_times)
-            text_response = PlainTextResponse(content=formatted_text)
-            add_cache_headers(text_response)
-            return text_response
+            return PlainTextResponse(content=formatted_text)
         
-        add_cache_headers(response)
         return AvailabilityRangeResponse(
             start_date=start_date,
             end_date=end_date,
