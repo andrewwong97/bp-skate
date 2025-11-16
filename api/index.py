@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Response
 from fastapi.responses import JSONResponse, PlainTextResponse
 from typing import Optional, List
 import logging
@@ -27,6 +27,15 @@ except ImportError:
     )
 
 app = FastAPI()
+
+# Cache duration: 5 minutes = 300 seconds
+CACHE_MAX_AGE = 300
+
+
+def add_cache_headers(response: Response) -> Response:
+    """Add cache headers to response for 5 minutes."""
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_MAX_AGE}"
+    return response
 
 
 def format_skate_times(times: List[AvailabilityTime], date: str) -> str:
@@ -88,7 +97,7 @@ def format_skate_times_range(times: List[AvailabilityTime]) -> str:
 
 
 @app.get("/")
-async def root():
+async def root(response: Response):
     """
     Root endpoint - Gets the API info and documentation links.
     
@@ -96,6 +105,7 @@ async def root():
     
     - API information including links to Swagger UI, ReDoc, and OpenAPI JSON documentation.
     """
+    add_cache_headers(response)
     return {
         "message": "Bryant Park Skate Availability API",
         "documentation": {
@@ -108,6 +118,7 @@ async def root():
 
 @app.get("/availability")
 async def get_availability(
+    response: Response,
     date: Optional[str] = Query(None, description="Date in format YYYY-MM-DD. If not provided, uses current date."),
     caller: Optional[CallerType] = Query(CallerType.API, description="Caller type: USER returns human-readable text, API returns JSON (default)")
 ):
@@ -145,8 +156,11 @@ async def get_availability(
         # Return formatted text if caller is USER
         if caller == CallerType.USER:
             formatted_text = format_skate_times(filtered_times, date)
-            return PlainTextResponse(content=formatted_text)
+            text_response = PlainTextResponse(content=formatted_text)
+            add_cache_headers(text_response)
+            return text_response
         
+        add_cache_headers(response)
         return AvailabilityResponse(
             date=date,
             count=len(filtered_times),
@@ -158,6 +172,7 @@ async def get_availability(
 
 @app.get("/availability/text")
 async def get_availability_text(
+    response: Response,
     date: Optional[str] = Query(None, description="Date in format YYYY-MM-DD. If not provided, uses current date."),
     caller: Optional[CallerType] = Query(CallerType.USER, description="Caller type: USER returns human-readable text (default), API returns JSON")
 ):
@@ -195,8 +210,11 @@ async def get_availability_text(
         # Return formatted text if caller is USER (default)
         if caller == CallerType.USER:
             formatted_text = format_skate_times(filtered_times, date)
-            return PlainTextResponse(content=formatted_text)
+            text_response = PlainTextResponse(content=formatted_text)
+            add_cache_headers(text_response)
+            return text_response
         
+        add_cache_headers(response)
         return AvailabilityResponse(
             date=date,
             count=len(filtered_times),
@@ -208,6 +226,7 @@ async def get_availability_text(
 
 @app.get("/availability-range")
 async def get_availability_range(
+    response: Response,
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
     caller: Optional[CallerType] = Query(CallerType.API, description="Caller type: USER returns human-readable text, API returns JSON (default)")
@@ -244,8 +263,11 @@ async def get_availability_range(
         # Return formatted text if caller is USER
         if caller == CallerType.USER:
             formatted_text = format_skate_times_range(filtered_times)
-            return PlainTextResponse(content=formatted_text)
+            text_response = PlainTextResponse(content=formatted_text)
+            add_cache_headers(text_response)
+            return text_response
         
+        add_cache_headers(response)
         return AvailabilityRangeResponse(
             start_date=start_date,
             end_date=end_date,
@@ -258,6 +280,7 @@ async def get_availability_range(
 
 @app.get("/availability-range/text")
 async def get_availability_range_text(
+    response: Response,
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
     caller: Optional[CallerType] = Query(CallerType.USER, description="Caller type: USER returns human-readable text (default), API returns JSON")
@@ -294,8 +317,11 @@ async def get_availability_range_text(
         # Return formatted text if caller is USER (default)
         if caller == CallerType.USER:
             formatted_text = format_skate_times_range(filtered_times)
-            return PlainTextResponse(content=formatted_text)
+            text_response = PlainTextResponse(content=formatted_text)
+            add_cache_headers(text_response)
+            return text_response
         
+        add_cache_headers(response)
         return AvailabilityRangeResponse(
             start_date=start_date,
             end_date=end_date,
