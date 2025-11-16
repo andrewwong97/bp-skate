@@ -1,58 +1,212 @@
 from fastapi import FastAPI, Query, HTTPException
-from fastapi.responses import JSONResponse
-from typing import Optional
+from fastapi.responses import JSONResponse, PlainTextResponse
+from typing import Optional, List
+import logging
+from datetime import datetime
 
-from .fetch_peek_availability import (
-    fetch_availability_single_date,
-    fetch_availability_date_range,
-    parse_availability
-)
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
+
+try:
+    # Try relative imports first (works in production/package context)
+    from .models import AvailabilityTime, AvailabilityResponse, AvailabilityRangeResponse, CallerType
+    from .fetch_peek_availability import (
+        fetch_availability_single_date,
+        fetch_availability_date_range,
+        parse_availability
+    )
+    log.info("Using relative imports")
+except ImportError:
+    # Fall back to absolute imports (works in local development)
+    log.warning("Using absolute imports")
+    from models import AvailabilityTime, AvailabilityResponse, AvailabilityRangeResponse, CallerType
+    from fetch_peek_availability import (
+        fetch_availability_single_date,
+        fetch_availability_date_range,
+        parse_availability
+    )
 
 app = FastAPI()
 
 
+def format_skate_times(times: List[AvailabilityTime], date: str) -> str:
+    """
+    Format availability times into human-readable text.
+    
+    Args:
+        times: List of AvailabilityTime models
+        date: Date string in YYYY-MM-DD format
+    
+    Returns:
+        Formatted string with times and spots
+    """
+    # Parse the date for formatting
+    date_obj = datetime.strptime(date, "%Y-%m-%d")
+    # Format date: "November 16, 2025" (remove leading zero from day)
+    day = date_obj.day
+    formatted_date = date_obj.strftime(f"%B {day}, %Y")
+    
+    lines = [f"For {formatted_date}:"]
+    
+    for time in times:
+        # Format time (already in "7:20PM" format from API)
+        lines.append(f"{time.time} has {time.spots} spots")
+    
+    return "\n".join(lines)
+
+
+def format_skate_times_range(times: List[AvailabilityTime]) -> str:
+    """
+    Format availability times across a date range into human-readable text.
+    Groups times by date.
+    
+    Args:
+        times: List of AvailabilityTime models
+    
+    Returns:
+        Formatted string with times and spots grouped by date
+    """
+    from collections import defaultdict
+    
+    # Group times by date
+    times_by_date = defaultdict(list)
+    for time in times:
+        times_by_date[time.date].append(time)
+    
+    lines = []
+    # Sort dates and format each group
+    for date in sorted(times_by_date.keys()):
+        date_obj = datetime.strptime(date, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%B %-d, %Y").replace(" 0", " ")  # Remove leading zero from day
+        
+        lines.append(f"For {formatted_date}:")
+        for time in times_by_date[date]:
+            lines.append(f"{time.time} has {time.spots} spots")
+        lines.append("")  # Empty line between dates
+    
+    return "\n".join(lines).strip()
+
+
 @app.get("/")
 async def root():
-    """Root endpoint - API info"""
+    """Root endpoint - Gets the API info"""
     return {
-        "message": "Peek Availability API",
+        "message": "Bryant Park Skate Availability API",
+        "documentation": {
+            "swagger": "/docs",
+            "redoc": "/redoc",
+            "openapi_json": "/openapi.json"
+        },
         "endpoints": {
-            "/availability/{date}": "Get availability for a single date",
-            "/availability-range": "Get availability for a date range"
+            "/availability": "Get availability for a single date (JSON by default, use caller=USER for text)",
+            "/availability/text": "Get availability for a single date (human-readable text by default)",
+            "/availability-range": "Get availability for a date range (JSON by default, use caller=USER for text)",
+            "/availability-range/text": "Get availability for a date range (human-readable text by default)"
+        },
+        "examples": {
+            "json": {
+                "/availability?date=2025-11-16": "Get JSON availability for November 16, 2025",
+                "/availability-range?start_date=2025-11-16&end_date=2025-11-23": "Get JSON availability for November 16-23, 2025"
+            },
+            "text": {
+                "/availability/text?date=2025-11-16": "Get text availability for November 16, 2025",
+                "/availability-range/text?start_date=2025-11-16&end_date=2025-11-23": "Get text availability for November 16-23, 2025"
+            }
         }
     }
 
 
-@app.get("/availability/{date}")
+@app.get("/availability")
 async def get_availability(
-    date: str,
-    booking_refid: Optional[str] = Query(None, description="Optional booking reference ID")
+    date: Optional[str] = Query(None, description="Date in format YYYY-MM-DD. If not provided, uses current date."),
+    caller: Optional[CallerType] = Query(CallerType.API, description="Caller type: USER returns human-readable text, API returns JSON (default)")
 ):
     """
     Get availability times for a single date.
     
     Args:
-        date: Date in format YYYY-MM-DD (e.g., "2025-11-16")
-        booking_refid: Optional booking reference ID
+        date: Date in format YYYY-MM-DD (e.g., "2025-11-16"). If not provided, uses current date.
+        caller: Caller type enum - USER returns human-readable text format, API returns JSON format (default)
     
     Returns:
-        List of availability times with spots and availability status
+        List of availability times with spots and availability status (filtered to exclude 0 spots)
+        or human-readable text if caller=USER
     """
+    # Use current date if date is not provided
+    if date is None:
+        date = datetime.now().strftime("%Y-%m-%d")
+    
     try:
         raw_data = fetch_availability_single_date(
-            date=date,
-            booking_refid=booking_refid
+            date=date
         )
         
         if raw_data is None:
             raise HTTPException(status_code=500, detail="Failed to fetch availability data")
         
         parsed = parse_availability(raw_data)
-        return {
-            "date": date,
-            "count": len(parsed),
-            "times": parsed
-        }
+        # Convert to Pydantic models first
+        times = [AvailabilityTime(**time) for time in parsed]
+        # Filter out times with 0 spots using the model attribute
+        filtered_times = [time for time in times if time.spots > 0]
+        
+        # Return formatted text if caller is USER
+        if caller == CallerType.USER:
+            formatted_text = format_skate_times(filtered_times, date)
+            return PlainTextResponse(content=formatted_text)
+        
+        return AvailabilityResponse(
+            date=date,
+            count=len(filtered_times),
+            times=filtered_times
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@app.get("/availability/text")
+async def get_availability_text(
+    date: Optional[str] = Query(None, description="Date in format YYYY-MM-DD. If not provided, uses current date."),
+    caller: Optional[CallerType] = Query(CallerType.USER, description="Caller type: USER returns human-readable text (default), API returns JSON")
+):
+    """
+    Get availability times for a single date in human-readable text format (default).
+    
+    Args:
+        date: Date in format YYYY-MM-DD (e.g., "2025-11-16"). If not provided, uses current date.
+        caller: Caller type enum - USER returns human-readable text format (default), API returns JSON format
+    
+    Returns:
+        Human-readable text format by default, or JSON if caller=API
+    """
+    # Use current date if date is not provided
+    if date is None:
+        date = datetime.now().strftime("%Y-%m-%d")
+    
+    try:
+        raw_data = fetch_availability_single_date(
+            date=date
+        )
+        
+        if raw_data is None:
+            raise HTTPException(status_code=500, detail="Failed to fetch availability data")
+        
+        parsed = parse_availability(raw_data)
+        # Convert to Pydantic models first
+        times = [AvailabilityTime(**time) for time in parsed]
+        # Filter out times with 0 spots using the model attribute
+        filtered_times = [time for time in times if time.spots > 0]
+        
+        # Return formatted text if caller is USER (default)
+        if caller == CallerType.USER:
+            formatted_text = format_skate_times(filtered_times, date)
+            return PlainTextResponse(content=formatted_text)
+        
+        return AvailabilityResponse(
+            date=date,
+            count=len(filtered_times),
+            times=filtered_times
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
@@ -61,9 +215,7 @@ async def get_availability(
 async def get_availability_range(
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
-    booking_refid: Optional[str] = Query(None, description="Optional booking reference ID"),
-    namespace: Optional[str] = Query(None, description="Optional namespace parameter"),
-    pc_id: Optional[str] = Query(None, description="Optional product configuration ID")
+    caller: Optional[CallerType] = Query(CallerType.API, description="Caller type: USER returns human-readable text, API returns JSON (default)")
 ):
     """
     Get availability for a date range.
@@ -71,31 +223,89 @@ async def get_availability_range(
     Args:
         start_date: Start date in format YYYY-MM-DD
         end_date: End date in format YYYY-MM-DD
-        booking_refid: Optional booking reference ID
-        namespace: Optional namespace parameter
-        pc_id: Optional product configuration ID
+        caller: Caller type enum - USER returns human-readable text format, API returns JSON format (default)
     
     Returns:
-        List of availability times across the date range
+        List of availability times across the date range (filtered to exclude 0 spots)
+        or human-readable text if caller=USER
     """
     try:
         raw_data = fetch_availability_date_range(
             start_date=start_date,
-            end_date=end_date,
-            booking_refid=booking_refid,
-            namespace=namespace,
-            pc_id=pc_id
+            end_date=end_date
         )
         
         if raw_data is None:
             raise HTTPException(status_code=500, detail="Failed to fetch availability data")
         
         parsed = parse_availability(raw_data)
-        return {
-            "start_date": start_date,
-            "end_date": end_date,
-            "count": len(parsed),
-            "times": parsed
-        }
+        # Convert to Pydantic models first
+        times = [AvailabilityTime(**time) for time in parsed]
+        # Filter out times with 0 spots using the model attribute
+        filtered_times = [time for time in times if time.spots > 0]
+        
+        # Return formatted text if caller is USER
+        if caller == CallerType.USER:
+            formatted_text = format_skate_times_range(filtered_times)
+            return PlainTextResponse(content=formatted_text)
+        
+        return AvailabilityRangeResponse(
+            start_date=start_date,
+            end_date=end_date,
+            count=len(filtered_times),
+            times=filtered_times
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@app.get("/availability-range/text")
+async def get_availability_range_text(
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    caller: Optional[CallerType] = Query(CallerType.USER, description="Caller type: USER returns human-readable text (default), API returns JSON")
+):
+    """
+    Get availability for a date range in human-readable text format (default).
+    
+    Args:
+        start_date: Start date in format YYYY-MM-DD
+        end_date: End date in format YYYY-MM-DD
+        caller: Caller type enum - USER returns human-readable text format (default), API returns JSON format
+    
+    Returns:
+        Human-readable text format by default, or JSON if caller=API
+    """
+    try:
+        raw_data = fetch_availability_date_range(
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if raw_data is None:
+            raise HTTPException(status_code=500, detail="Failed to fetch availability data")
+        
+        parsed = parse_availability(raw_data)
+        # Convert to Pydantic models first
+        times = [AvailabilityTime(**time) for time in parsed]
+        # Filter out times with 0 spots using the model attribute
+        filtered_times = [time for time in times if time.spots > 0]
+        
+        # Return formatted text if caller is USER (default)
+        if caller == CallerType.USER:
+            formatted_text = format_skate_times_range(filtered_times)
+            return PlainTextResponse(content=formatted_text)
+        
+        return AvailabilityRangeResponse(
+            start_date=start_date,
+            end_date=end_date,
+            count=len(filtered_times),
+            times=filtered_times
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+# This is important for Vercel
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
