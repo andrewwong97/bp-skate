@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 
 # Default Configuration
+# Note - this is the public API key for the Peek API
 PEEK_API_KEY = "6e2f0590-d64d-4e77-b368-a874c585b1d2"
+# These are inferred from various Peek API requests
 ACTIVITY_ID = "4c19001d-dc02-41c9-a0c2-21069b5035c7"
 TICKET_ID = "0d2a5290-6159-48ab-a921-55630701b9f8"
 
