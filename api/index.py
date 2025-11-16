@@ -89,29 +89,19 @@ def format_skate_times_range(times: List[AvailabilityTime]) -> str:
 
 @app.get("/")
 async def root():
-    """Root endpoint - Gets the API info"""
+    """
+    Root endpoint - Gets the API info and documentation links.
+    
+    **Returns:**
+    
+    - API information including links to Swagger UI, ReDoc, and OpenAPI JSON documentation.
+    """
     return {
         "message": "Bryant Park Skate Availability API",
         "documentation": {
             "swagger": "/docs",
             "redoc": "/redoc",
             "openapi_json": "/openapi.json"
-        },
-        "endpoints": {
-            "/availability": "Get availability for a single date (JSON by default, use caller=USER for text)",
-            "/availability/text": "Get availability for a single date (human-readable text by default)",
-            "/availability-range": "Get availability for a date range (JSON by default, use caller=USER for text)",
-            "/availability-range/text": "Get availability for a date range (human-readable text by default)"
-        },
-        "examples": {
-            "json": {
-                "/availability?date=2025-11-16": "Get JSON availability for November 16, 2025",
-                "/availability-range?start_date=2025-11-16&end_date=2025-11-23": "Get JSON availability for November 16-23, 2025"
-            },
-            "text": {
-                "/availability/text?date=2025-11-16": "Get text availability for November 16, 2025",
-                "/availability-range/text?start_date=2025-11-16&end_date=2025-11-23": "Get text availability for November 16-23, 2025"
-            }
         }
     }
 
@@ -124,13 +114,15 @@ async def get_availability(
     """
     Get availability times for a single date.
     
-    Args:
-        date: Date in format YYYY-MM-DD (e.g., "2025-11-16"). If not provided, uses current date.
-        caller: Caller type enum - USER returns human-readable text format, API returns JSON format (default)
+    **Parameters:**
     
-    Returns:
-        List of availability times with spots and availability status (filtered to exclude 0 spots)
-        or human-readable text if caller=USER
+    - **date** (`str`, optional): Date in format `YYYY-MM-DD` (e.g., `"2025-11-16"`). If not provided, uses today's date.
+    - **caller** (`CallerType`, optional): Caller type enum. `USER` returns human-readable text format, `API` returns JSON format (default: `API`).
+    
+    **Returns:**
+    
+    - If `caller=API` (default): `AvailabilityResponse` object with a list of availability times with spots and availability status (filtered to exclude 0 spots).
+    - If `caller=USER`: Human-readable plain text format.
     """
     # Use current date if date is not provided
     if date is None:
@@ -172,12 +164,15 @@ async def get_availability_text(
     """
     Get availability times for a single date in human-readable text format (default).
     
-    Args:
-        date: Date in format YYYY-MM-DD (e.g., "2025-11-16"). If not provided, uses current date.
-        caller: Caller type enum - USER returns human-readable text format (default), API returns JSON format
+    **Parameters:**
     
-    Returns:
-        Human-readable text format by default, or JSON if caller=API
+    - **date** (`str`, optional): Date in format `YYYY-MM-DD` (e.g., `"2025-11-16"`). If not provided, uses today's date.
+    - **caller** (`CallerType`, optional): Caller type enum. `USER` returns human-readable text format (default: `USER`), `API` returns JSON format.
+    
+    **Returns:**
+    
+    - If `caller=USER` (default): Human-readable plain text format.
+    - If `caller=API`: `AvailabilityResponse` object with a list of availability times with spots and availability status (filtered to exclude 0 spots).
     """
     # Use current date if date is not provided
     if date is None:
@@ -220,14 +215,16 @@ async def get_availability_range(
     """
     Get availability for a date range.
     
-    Args:
-        start_date: Start date in format YYYY-MM-DD
-        end_date: End date in format YYYY-MM-DD
-        caller: Caller type enum - USER returns human-readable text format, API returns JSON format (default)
+    **Parameters:**
     
-    Returns:
-        List of availability times across the date range (filtered to exclude 0 spots)
-        or human-readable text if caller=USER
+    - **start_date** (`str`, required): Start date in format `YYYY-MM-DD` (e.g., `"2025-11-16"`).
+    - **end_date** (`str`, required): End date in format `YYYY-MM-DD` (e.g., `"2025-11-20"`).
+    - **caller** (`CallerType`, optional): Caller type enum. `USER` returns human-readable text format, `API` returns JSON format (default: `API`).
+    
+    **Returns:**
+    
+    - If `caller=API` (default): `AvailabilityRangeResponse` object with a list of availability times across the date range (filtered to exclude 0 spots).
+    - If `caller=USER`: Human-readable plain text format grouped by date.
     """
     try:
         raw_data = fetch_availability_date_range(
@@ -268,13 +265,16 @@ async def get_availability_range_text(
     """
     Get availability for a date range in human-readable text format (default).
     
-    Args:
-        start_date: Start date in format YYYY-MM-DD
-        end_date: End date in format YYYY-MM-DD
-        caller: Caller type enum - USER returns human-readable text format (default), API returns JSON format
+    **Parameters:**
     
-    Returns:
-        Human-readable text format by default, or JSON if caller=API
+    - **start_date** (`str`, required): Start date in format `YYYY-MM-DD` (e.g., `"2025-11-16"`).
+    - **end_date** (`str`, required): End date in format `YYYY-MM-DD` (e.g., `"2025-11-20"`).
+    - **caller** (`CallerType`, optional): Caller type enum. `USER` returns human-readable text format (default: `USER`), `API` returns JSON format.
+    
+    **Returns:**
+    
+    - If `caller=USER` (default): Human-readable plain text format grouped by date.
+    - If `caller=API`: `AvailabilityRangeResponse` object with a list of availability times across the date range (filtered to exclude 0 spots).
     """
     try:
         raw_data = fetch_availability_date_range(
