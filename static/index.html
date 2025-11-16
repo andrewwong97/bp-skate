@@ -199,6 +199,11 @@
           const response = await fetch(url);
 
           if (!response.ok) {
+            // Handle rate limit error (429) with friendly message
+            if (response.status === 429) {
+              resultsDiv.innerHTML = `<div class="error">Rate limit exceeded. Too many requests.</div>`;
+              return;
+            }
             throw new Error(`HTTP error! status: ${response.status}`);
           }
 
