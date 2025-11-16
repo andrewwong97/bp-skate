@@ -3,6 +3,11 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 
+try:
+    from .rate_limiter import check_rate_limit
+except ImportError:
+    from rate_limiter import check_rate_limit
+
 # Default Configuration
 # Note - this is the public API key for the Peek API
 PEEK_API_KEY = "6e2f0590-d64d-4e77-b368-a874c585b1d2"
@@ -53,6 +58,14 @@ def fetch_availability_single_date(
         params["src_booking_refid"] = booking_refid
     
     headers = {**DEFAULT_HEADERS, "authorization": f"Key {api_key}"}
+    
+    # Check rate limit before making the API call
+    allowed, rate_limit_info = check_rate_limit(identifier="peek_api")
+    if not allowed:
+        print(f"Rate limit exceeded: {rate_limit_info}")
+        raise Exception(
+            f"Rate limit exceeded. Please try again in {rate_limit_info.get('reset_in_seconds', 0)} seconds."
+        )
     
     try:
         response = requests.get(base_url, params=params, headers=headers)
@@ -114,6 +127,14 @@ def fetch_availability_date_range(
         params["pc-id"] = pc_id
     
     headers = {**DEFAULT_HEADERS, "authorization": f"Key {api_key}"}
+    
+    # Check rate limit before making the API call
+    allowed, rate_limit_info = check_rate_limit(identifier="peek_api")
+    if not allowed:
+        print(f"Rate limit exceeded: {rate_limit_info}")
+        raise Exception(
+            f"Rate limit exceeded. Please try again in {rate_limit_info.get('reset_in_seconds', 0)} seconds."
+        )
     
     try:
         response = requests.get(base_url, params=params, headers=headers)

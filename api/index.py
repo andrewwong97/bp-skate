@@ -199,7 +199,17 @@ async def get_availability(
             times=filtered_times
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        error_message = str(e)
+        # Check if it's a rate limit error
+        if "Rate limit exceeded" in error_message:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "Rate limit exceeded",
+                    "message": error_message,
+                }
+            )
+        raise HTTPException(status_code=500, detail=f"Error: {error_message}")
 
 
 @app.get("/availability/text")
@@ -253,7 +263,17 @@ async def get_availability_text(
             times=filtered_times
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        error_message = str(e)
+        # Check if it's a rate limit error
+        if "Rate limit exceeded" in error_message:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "Rate limit exceeded",
+                    "message": error_message,
+                }
+            )
+        raise HTTPException(status_code=500, detail=f"Error: {error_message}")
 
 
 @app.get("/availability-range")
@@ -307,7 +327,17 @@ async def get_availability_range(
             times=filtered_times
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        error_message = str(e)
+        # Check if it's a rate limit error
+        if "Rate limit exceeded" in error_message:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "Rate limit exceeded",
+                    "message": error_message,
+                }
+            )
+        raise HTTPException(status_code=500, detail=f"Error: {error_message}")
 
 
 @app.get("/availability-range/text")
@@ -361,7 +391,17 @@ async def get_availability_range_text(
             times=filtered_times
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        error_message = str(e)
+        # Check if it's a rate limit error
+        if "Rate limit exceeded" in error_message:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "Rate limit exceeded",
+                    "message": error_message,
+                }
+            )
+        raise HTTPException(status_code=500, detail=f"Error: {error_message}")
 
 # This is important for Vercel
 if __name__ == "__main__":
