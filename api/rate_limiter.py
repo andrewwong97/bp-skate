@@ -13,9 +13,9 @@ UPSTASH_REDIS_REST_URL = os.getenv("UPSTASH_REDIS_REST_URL", None)
 UPSTASH_REDIS_REST_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", None)
 
 # Rate limiting configuration
-# Default: 1 request per minute per IP/endpoint
-DEFAULT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "1"))
-DEFAULT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))  # 1 minute
+# Default: 30 requests per hour
+DEFAULT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "30"))
+DEFAULT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "3600"))  # 1 hour
 
 
 class RateLimiter:
